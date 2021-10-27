@@ -16,12 +16,12 @@ def crawler():
         options.add_argument('user-agent=' + user_agent)
         options.add_argument('--disable-software-rasterizer')
         driver = webdriver.Chrome(chrome_driver, options=options)
-        driver.get(url)
         html = driver.page_source
         soup = BeautifulSoup(html, "html.parser")
         text = soup.text
         #print(text)
         while(1):
+            driver.get(url)
             elem = driver.find_element_by_class_name('buttons')
             if (elem.text != '마감'):
                 elem.click()
