@@ -17,6 +17,8 @@ def fileSearch(dir_path, cnt):
 	global dir_cnt
 	filelist = []
 
+	for _ in range(cnt):
+		print("\t", end=" ")
 	print("[>] Directory: %s" % dir_path)
 	for files in os.listdir(dir_path):
 		if os.path.isfile(dir_path+files):
