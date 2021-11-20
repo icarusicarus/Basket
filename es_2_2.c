@@ -39,6 +39,7 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx.h"
 #include "bsp.h"
+#include "cpu.h"
 /*
 *********************************************************************************************************
 *                                            LOCAL DEFINES
@@ -85,6 +86,7 @@ static void USART_Test(void *p_arg);
 
 static void Setup_Gpio(void);
 
+CPU_SR_ALLOC();
 /*
 *********************************************************************************************************
 *                                       LOCAL GLOBAL VARIABLES
@@ -114,9 +116,8 @@ char c;
 char command[256] = {
     0,
 };
-u16_t led_on_off[3] = {0, 0, 0};
-//u16_t led_off[3] = {0, 0, 0};
-u16_t led_blink[3] = {0, 0, 0};
+int led_on_off[3] = {0, 0, 0};
+int led_blink[3] = {0, 0, 0};
 
 /* ------------ FLOATING POINT TEST TASK -------------- */
 /*
@@ -238,7 +239,7 @@ static void AppTask_LED1(void *p_arg)
 
         if (led_blink[0] != 0)
         {
-            u16_t period = led_blink[0];
+            int period = led_blink[0];
             BSP_LED_Toggle(1);
             OSTimeDlyHMSM(0u, 0u, 0u, period,
                           OS_OPT_TIME_HMSM_STRICT,
@@ -276,7 +277,7 @@ static void AppTask_LED2(void *p_arg)
 
         if (led_blink[1] != 0)
         {
-            u16_t period = led_blink[1];
+            int period = led_blink[1];
             BSP_LED_Toggle(2);
             OSTimeDlyHMSM(0u, 0u, 0u, period,
                           OS_OPT_TIME_HMSM_STRICT,
@@ -314,7 +315,7 @@ static void AppTask_LED3(void *p_arg)
 
         if (led_blink[2] != 0)
         {
-            u16_t period = led_blink[2];
+            int period = led_blink[2];
             BSP_LED_Toggle(3);
             OSTimeDlyHMSM(0u, 0u, 0u, period,
                           OS_OPT_TIME_HMSM_STRICT,
@@ -338,21 +339,79 @@ static void USART_Test(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+
         c = USART_ReceiveData(Nucleo_COM1);
         USART_SendData(Nucleo_COM1, c);
+
         if (c == '\r')
             break;
+
+        CPU_CRITICAL_ENTER();
         command[index] = c;
+        CPU_CRITICAL_EXIT();
         index++;
+
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
-    send_string("\n\r");
-    char buffer[65] = {0};
-    send_string(itoa(index, buffer, 10));
-    send_string("\n\r");
-    send_string(command);
+    command[index] = '\0';
+
+    if (!(strncmp(command, "led", 3)))
+    {
+        int led_number = atoi(command + 3);
+        if (!(strncmp((command + 4), "on", 2)))
+        {
+            CPU_CRITICAL_ENTER();
+            led_on_off[led_number - 1] = 1;
+            CPU_CRITICAL_EXIT();
+
+            send_string("\n\rCommand Accept: ");
+            send_string(command);
+            send_string("\n\r");
+        }
+        else if (!(strncmp((command + 4), "off", 3)))
+        {
+            CPU_CRITICAL_ENTER();
+            led_on_off[led_number - 1] = 0;
+            CPU_CRITICAL_EXIT();
+
+            send_string("\n\rCommand Accept: ");
+            send_string(command);
+            send_string("\n\r");
+        }
+        else if (!(strncmp((command + 4), "blink", 5)))
+        {
+            int blink_count = atoi(command + 9);
+            CPU_CRITICAL_ENTER();
+            led_blink[led_number - 1] = blink_count;
+            CPU_CRITICAL_EXIT();
+
+            send_string("\n\rCommand Accept: ");
+            send_string(command);
+            send_string("\n\r");
+        }
+        else
+            send_string("\n\rWrong Command!!!");
+    }
+    else if (!(strncmp(command, "reset", 5)))
+    {
+        CPU_CRITICAL_ENTER();
+        led_on_off[0] = 0;
+        led_on_off[1] = 0;
+        led_on_off[2] = 0;
+        CPU_CRITICAL_EXIT();
+
+        send_string("\n\rCommand Accept: ");
+        send_string(command);
+        send_string("\n\r");
+    }
+    else
+        send_string("\n\rWrong Command!!!");
+
+    OSTimeDlyHMSM(0u, 0u, 0u, 1u,
+                  OS_OPT_TIME_HMSM_STRICT,
+                  &err);
 }
 /*
 *********************************************************************************************************
