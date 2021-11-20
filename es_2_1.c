@@ -291,7 +291,7 @@ static void USART_Test(void *p_arg)
     OS_ERR err;
     /* USART_TX_TEST */
     while (DEF_TRUE)
-    {   /* Task body, always written as an infinite loop.       */
+    { /* Task body, always written as an infinite loop.       */
         //    	USART_SendData(Nucleo_COM1, (uint8_t) '*');
         //    	send_string("\n\rhello world \n\r");
 
@@ -311,9 +311,9 @@ static void USART_Test(void *p_arg)
         //		USART_SendData(Nucleo_COM1, c);
 
         send_string("\n\r");
-        //		send_string(&c);
+        send_string(&c);
 
-        OSTimeDlyHMSM(0u, 0u, 2u, 0u,
+        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
