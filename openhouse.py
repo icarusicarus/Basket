@@ -7,7 +7,7 @@ import time
 import sys
 import os
 
-url = 'Protected'
+url = 'naver.com'
 chrome_driver = 'chromedriver.exe'
 
 def crawler():
