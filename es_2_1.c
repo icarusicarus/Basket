@@ -289,36 +289,21 @@ static void AppTask_2000ms(void *p_arg)
 static void USART_Test(void *p_arg)
 {
     OS_ERR err;
-    /* USART_TX_TEST */
     while (DEF_TRUE)
     { /* Task body, always written as an infinite loop.       */
-        //    	USART_SendData(Nucleo_COM1, (uint8_t) '*');
-        //    	send_string("\n\rhello world \n\r");
-
-        while (USART_ReceiveData(Nucleo_COM1) != '`')
+        while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET)
         {
-            while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET)
-            {
-            }
-
-            c = USART_ReceiveData(Nucleo_COM1);
-            USART_SendData(Nucleo_COM1, c);
+            OSTimeDlyHMSM(0u, 0u, 0u, 1u,
+                          OS_OPT_TIME_HMSM_STRICT,
+                          &err);
         }
+        c = USART_ReceiveData(Nucleo_COM1);
+        USART_SendData(Nucleo_COM1, c);
 
-        //		while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET) {}
-        //
-        //		c = USART_ReceiveData(Nucleo_COM1);
-        //		USART_SendData(Nucleo_COM1, c);
-
-        send_string("\n\r");
+        send_string("\n\rYou typed: ");
         send_string(&c);
-
-        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-                      OS_OPT_TIME_HMSM_STRICT,
-                      &err);
+        send_string("\n\r");
     }
-
-    /* USART_RX_TEST */
 }
 /*
 *********************************************************************************************************
