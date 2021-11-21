@@ -234,9 +234,8 @@ static void AppTask_LED1(void *p_arg)
     {
         if (led_on_off[0] == 1)
             BSP_LED_On(1);
-        else
+        else if (led_on_off[0] == 0)
             BSP_LED_Off(1);
-
         if (led_blink[0] != 0)
         {
             int period = led_blink[0];
@@ -245,6 +244,7 @@ static void AppTask_LED1(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
@@ -272,9 +272,8 @@ static void AppTask_LED2(void *p_arg)
     {
         if (led_on_off[1] == 1)
             BSP_LED_On(2);
-        else
+        else if (led_on_off[1] == 0)
             BSP_LED_Off(2);
-
         if (led_blink[1] != 0)
         {
             int period = led_blink[1];
@@ -283,6 +282,7 @@ static void AppTask_LED2(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
@@ -310,9 +310,8 @@ static void AppTask_LED3(void *p_arg)
     {
         if (led_on_off[2] == 1)
             BSP_LED_On(3);
-        else
+        else if (led_on_off[2] == 0)
             BSP_LED_Off(3);
-
         if (led_blink[2] != 0)
         {
             int period = led_blink[2];
@@ -321,6 +320,7 @@ static void AppTask_LED3(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
@@ -333,85 +333,92 @@ static void USART_Test(void *p_arg)
     volatile int index = 0;
     while (DEF_TRUE)
     {
-        while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET)
+        while (USART_ReceiveData(Nucleo_COM1) != '\r')
         {
+            while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET)
+            {
+                OSTimeDlyHMSM(0u, 0u, 0u, 1u,
+                              OS_OPT_TIME_HMSM_STRICT,
+                              &err);
+            }
+
+            c = USART_ReceiveData(Nucleo_COM1);
+            USART_SendData(Nucleo_COM1, c);
+            CPU_CRITICAL_ENTER();
+            command[index] = c;
+            CPU_CRITICAL_EXIT();
+            index++;
             OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
 
-        c = USART_ReceiveData(Nucleo_COM1);
-        USART_SendData(Nucleo_COM1, c);
+        // if (c == '\r')
+        //     break;
 
-        if (c == '\r')
-            break;
+        command[index] = '\0';
 
-        CPU_CRITICAL_ENTER();
-        command[index] = c;
-        CPU_CRITICAL_EXIT();
-        index++;
+        if (!(strncmp(command, "led", 3)))
+        {
+            int led_number = atoi(command + 3);
+            if (!(strncmp((command + 4), "on", 2)))
+            {
+                CPU_CRITICAL_ENTER();
+                led_on_off[led_number - 1] = 1;
+                CPU_CRITICAL_EXIT();
+
+                // send_string("\n\rCommand Accept: ");
+                // send_string(command);
+                // send_string("\n\r");
+            }
+            else if (!(strncmp((command + 4), "off", 3)))
+            {
+                CPU_CRITICAL_ENTER();
+                led_on_off[led_number - 1] = 0;
+                CPU_CRITICAL_EXIT();
+
+                // send_string("\n\rCommand Accept: ");
+                // send_string(command);
+                // send_string("\n\r");
+            }
+            else if (!(strncmp((command + 4), "blink", 5)))
+            {
+                int blink_count = atoi(command + 9);
+                CPU_CRITICAL_ENTER();
+                led_blink[led_number - 1] = blink_count;
+                CPU_CRITICAL_EXIT();
+
+                // send_string("\n\rCommand Accept: ");
+                // send_string(command);
+                // send_string("\n\r");
+            }
+            // else
+            //     send_string("\n\rWrong Command!!!");
+            index = 0;
+        }
+        else if (!(strncmp(command, "reset", 5)))
+        {
+            CPU_CRITICAL_ENTER();
+            led_on_off[0] = 0;
+            led_on_off[1] = 0;
+            led_on_off[2] = 0;
+            CPU_CRITICAL_EXIT();
+
+            // send_string("\n\rCommand Accept: ");
+            // send_string(command);
+            // send_string("\n\r");
+            index = 0;
+        }
+        else
+        {
+            // send_string("\n\rWrong Command!!!");
+            index = 0;
+        }
 
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
-    command[index] = '\0';
-
-    if (!(strncmp(command, "led", 3)))
-    {
-        int led_number = atoi(command + 3);
-        if (!(strncmp((command + 4), "on", 2)))
-        {
-            CPU_CRITICAL_ENTER();
-            led_on_off[led_number - 1] = 1;
-            CPU_CRITICAL_EXIT();
-
-            send_string("\n\rCommand Accept: ");
-            send_string(command);
-            send_string("\n\r");
-        }
-        else if (!(strncmp((command + 4), "off", 3)))
-        {
-            CPU_CRITICAL_ENTER();
-            led_on_off[led_number - 1] = 0;
-            CPU_CRITICAL_EXIT();
-
-            send_string("\n\rCommand Accept: ");
-            send_string(command);
-            send_string("\n\r");
-        }
-        else if (!(strncmp((command + 4), "blink", 5)))
-        {
-            int blink_count = atoi(command + 9);
-            CPU_CRITICAL_ENTER();
-            led_blink[led_number - 1] = blink_count;
-            CPU_CRITICAL_EXIT();
-
-            send_string("\n\rCommand Accept: ");
-            send_string(command);
-            send_string("\n\r");
-        }
-        else
-            send_string("\n\rWrong Command!!!");
-    }
-    else if (!(strncmp(command, "reset", 5)))
-    {
-        CPU_CRITICAL_ENTER();
-        led_on_off[0] = 0;
-        led_on_off[1] = 0;
-        led_on_off[2] = 0;
-        CPU_CRITICAL_EXIT();
-
-        send_string("\n\rCommand Accept: ");
-        send_string(command);
-        send_string("\n\r");
-    }
-    else
-        send_string("\n\rWrong Command!!!");
-
-    OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-                  OS_OPT_TIME_HMSM_STRICT,
-                  &err);
 }
 /*
 *********************************************************************************************************
