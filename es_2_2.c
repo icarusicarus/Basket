@@ -105,7 +105,7 @@ static CPU_STK Task_LED1_Stack[APP_CFG_TASK_START_STK_SIZE];
 static CPU_STK Task_LED2_Stack[APP_CFG_TASK_START_STK_SIZE];
 static CPU_STK Task_LED3_Stack[APP_CFG_TASK_START_STK_SIZE];
 static CPU_STK USART_Test_Stack[APP_CFG_TASK_START_STK_SIZE];
-int count = 0;
+
 task_t cyclic_tasks[TASK_N] = {
     {"Task_LED1", AppTask_LED1, 0, &Task_LED1_Stack[0], &Task_LED1_TCB},
     {"Task_LED2", AppTask_LED2, 0, &Task_LED2_Stack[0], &Task_LED2_TCB},
@@ -232,10 +232,6 @@ static void AppTask_LED1(void *p_arg)
 
     while (DEF_TRUE)
     {
-        if (led_on_off[0] == 1)
-            BSP_LED_On(1);
-        else if (led_on_off[0] == 0)
-            BSP_LED_Off(1);
         if (led_blink[0] != 0)
         {
             int period = led_blink[0];
@@ -244,6 +240,10 @@ static void AppTask_LED1(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+        else if (led_on_off[0] == 1)
+            BSP_LED_On(1);
+        else if (led_on_off[0] == 0)
+            BSP_LED_Off(1);
 
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
@@ -270,10 +270,6 @@ static void AppTask_LED2(void *p_arg)
 
     while (DEF_TRUE)
     {
-        if (led_on_off[1] == 1)
-            BSP_LED_On(2);
-        else if (led_on_off[1] == 0)
-            BSP_LED_Off(2);
         if (led_blink[1] != 0)
         {
             int period = led_blink[1];
@@ -282,6 +278,10 @@ static void AppTask_LED2(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+        else if (led_on_off[1] == 1)
+            BSP_LED_On(2);
+        else if (led_on_off[1] == 0)
+            BSP_LED_Off(2);
 
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
@@ -308,10 +308,6 @@ static void AppTask_LED3(void *p_arg)
 
     while (DEF_TRUE)
     {
-        if (led_on_off[2] == 1)
-            BSP_LED_On(3);
-        else if (led_on_off[2] == 0)
-            BSP_LED_Off(3);
         if (led_blink[2] != 0)
         {
             int period = led_blink[2];
@@ -320,6 +316,10 @@ static void AppTask_LED3(void *p_arg)
                           OS_OPT_TIME_HMSM_STRICT,
                           &err);
         }
+        else if (led_on_off[2] == 1)
+            BSP_LED_On(3);
+        else if (led_on_off[2] == 0)
+            BSP_LED_Off(3);
 
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
@@ -362,6 +362,7 @@ static void USART_Test(void *p_arg)
             {
                 CPU_CRITICAL_ENTER();
                 led_on_off[led_number - 1] = 1;
+                led_blink[led_number - 1] = 0;
                 CPU_CRITICAL_EXIT();
 
                 send_string("\n\rCommand Accept: ");
@@ -372,6 +373,7 @@ static void USART_Test(void *p_arg)
             {
                 CPU_CRITICAL_ENTER();
                 led_on_off[led_number - 1] = 0;
+                led_blink[led_number - 1] = 0;
                 CPU_CRITICAL_EXIT();
 
                 send_string("\n\rCommand Accept: ");
@@ -397,6 +399,9 @@ static void USART_Test(void *p_arg)
             led_on_off[0] = 0;
             led_on_off[1] = 0;
             led_on_off[2] = 0;
+            led_blink[0] = 0;
+            led_blink[1] = 0;
+            led_blink[2] = 0;
             CPU_CRITICAL_EXIT();
 
             send_string("\n\rCommand Accept: ");
