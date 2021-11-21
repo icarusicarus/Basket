@@ -353,9 +353,6 @@ static void USART_Test(void *p_arg)
                           &err);
         }
 
-        // if (c == '\r')
-        //     break;
-
         command[index] = '\0';
 
         if (!(strncmp(command, "led", 3)))
@@ -367,9 +364,9 @@ static void USART_Test(void *p_arg)
                 led_on_off[led_number - 1] = 1;
                 CPU_CRITICAL_EXIT();
 
-                // send_string("\n\rCommand Accept: ");
-                // send_string(command);
-                // send_string("\n\r");
+                send_string("\n\rCommand Accept: ");
+                send_string(command);
+                send_string("\n\r");
             }
             else if (!(strncmp((command + 4), "off", 3)))
             {
@@ -377,9 +374,9 @@ static void USART_Test(void *p_arg)
                 led_on_off[led_number - 1] = 0;
                 CPU_CRITICAL_EXIT();
 
-                // send_string("\n\rCommand Accept: ");
-                // send_string(command);
-                // send_string("\n\r");
+                send_string("\n\rCommand Accept: ");
+                send_string(command);
+                send_string("\n\r");
             }
             else if (!(strncmp((command + 4), "blink", 5)))
             {
@@ -388,12 +385,10 @@ static void USART_Test(void *p_arg)
                 led_blink[led_number - 1] = blink_count;
                 CPU_CRITICAL_EXIT();
 
-                // send_string("\n\rCommand Accept: ");
-                // send_string(command);
-                // send_string("\n\r");
+                send_string("\n\rCommand Accept: ");
+                send_string(command);
+                send_string("\n\r");
             }
-            // else
-            //     send_string("\n\rWrong Command!!!");
             index = 0;
         }
         else if (!(strncmp(command, "reset", 5)))
@@ -404,17 +399,15 @@ static void USART_Test(void *p_arg)
             led_on_off[2] = 0;
             CPU_CRITICAL_EXIT();
 
-            // send_string("\n\rCommand Accept: ");
-            // send_string(command);
-            // send_string("\n\r");
+            send_string("\n\rCommand Accept: ");
+            send_string(command);
+            send_string("\n\r");
             index = 0;
         }
         else
         {
-            // send_string("\n\rWrong Command!!!");
             index = 0;
         }
-
         OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
