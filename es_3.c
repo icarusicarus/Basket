@@ -100,13 +100,13 @@ static CPU_STK Task_TTY_Stack[APP_CFG_TASK_START_STK_SIZE];
 static CPU_STK Task_BTN_Stack[APP_CFG_TASK_START_STK_SIZE];
 
 task_t cyclic_tasks[TASK_N] = {
-    {"Task_LED", AppTask_LED, 0, &Task_LED_Stack[0], &Task_LED_TCB},
-    {"Task_TTY", AppTask_TTY, 0, &Task_TTY_Stack[0], &Task_TTY_TCB},
+    {"Task_LED", AppTask_LED, 1, &Task_LED_Stack[0], &Task_LED_TCB},
+    {"Task_TTY", AppTask_TTY, 2, &Task_TTY_Stack[0], &Task_TTY_TCB},
     {"Task_BTN", AppTask_BTN, 0, &Task_BTN_Stack[0], &Task_BTN_TCB},
 };
 
 int btn_cnt = 0;
-int led_pattern[3][3] = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}, {0, 0, 0}};
+int led_pattern[3][3] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
 /* ------------ FLOATING POINT TEST TASK -------------- */
 /*
 *********************************************************************************************************
@@ -230,7 +230,7 @@ static void AppTask_LED(void *p_arg)
         BSP_LED_OnOff(2, led2);
         BSP_LED_OnOff(3, led3);
 
-        OSTimeDlyHMSM(0u, 0u, 1u, 0u,
+        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
@@ -246,15 +246,8 @@ static void AppTask_TTY(void *p_arg)
     int led3 = 0;
 
     while (DEF_TRUE)
-    { /* Task body, always written as an infinite loop.       */
-
-        // while (USART_GetFlagStatus(Nucleo_COM1, USART_FLAG_RXNE) == RESET)
-        // {
-        //     OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-        //                   OS_OPT_TIME_HMSM_STRICT,
-        //                   &err);
-        // }
-
+    {
+        USART_SendData(Nucleo_COM1, 'A');
         // sem pend
         CPU_CRITICAL_ENTER();
         button_count = btn_cnt;
@@ -279,7 +272,7 @@ static void AppTask_TTY(void *p_arg)
         send_string(led3);
         send_string("\n\r");
 
-        OSTimeDlyHMSM(0u, 0u, 1u, 0u,
+        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
@@ -301,8 +294,7 @@ static void AppTask_BTN(void *p_arg)
         // if continous button input is allowed
         // button = 0;
         // sem post
-
-        OSTimeDlyHMSM(0u, 0u, 1u, 0u,
+        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
