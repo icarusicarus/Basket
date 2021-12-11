@@ -46,7 +46,6 @@
 *                                            LOCAL DEFINES
 *********************************************************************************************************
 */
-
 #define APP_TASK_EQ_0_ITERATION_NBR 16u
 /*
 *********************************************************************************************************
@@ -61,6 +60,7 @@ typedef enum
 
     TASK_N
 } task_e;
+
 typedef struct
 {
     CPU_CHAR *name;
@@ -82,7 +82,13 @@ static void AppTask_LED(void *p_arg);
 static void AppTask_TTY(void *p_arg);
 static void AppTask_BTN(void *p_arg);
 
+static void Button_Init(void);
+
 CPU_SR_ALLOC();
+const char messages[5][64] = {"Btn Push\n\r", "LED1 ON\n\r", "LED2 ON\n\r", "LED3 ON\n\r", "ALL LED OFF\n\r"};
+
+OS_Q TTY_Q, LED_Q;
+
 /*
 *********************************************************************************************************
 *                                       LOCAL GLOBAL VARIABLES
@@ -101,12 +107,12 @@ static CPU_STK Task_BTN_Stack[APP_CFG_TASK_START_STK_SIZE];
 
 task_t cyclic_tasks[TASK_N] = {
     {"Task_LED", AppTask_LED, 1, &Task_LED_Stack[0], &Task_LED_TCB},
-    {"Task_TTY", AppTask_TTY, 2, &Task_TTY_Stack[0], &Task_TTY_TCB},
-    {"Task_BTN", AppTask_BTN, 0, &Task_BTN_Stack[0], &Task_BTN_TCB},
+    {"Task_TTY", AppTask_TTY, 0, &Task_TTY_Stack[0], &Task_TTY_TCB},
+    {"Task_BTN", AppTask_BTN, 2, &Task_BTN_Stack[0], &Task_BTN_TCB},
 };
 
 int btn_cnt = 0;
-int led_pattern[3][3] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
+int led_pattern[4][3] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
 /* ------------ FLOATING POINT TEST TASK -------------- */
 /*
 *********************************************************************************************************
@@ -136,8 +142,14 @@ int main(void)
     Mem_Init();  /* Initialize Memory Management Module                  */
     Math_Init(); /* Initialize Mathematical Module                       */
 
+    BSP_Init();
+    Button_Init();
+
     /* OS Init */
     OSInit(&err); /* Init uC/OS-III.                                      */
+
+    OSQCreate(&TTY_Q, "TTY QUEUE", 10, &err);
+    OSQCreate(&LED_Q, "LED QUEUE", 10, &err);
 
     OSTaskCreate((OS_TCB *)&AppTaskStartTCB, /* Create the start task                                */
                  (CPU_CHAR *)"App Task Start",
@@ -206,31 +218,40 @@ static void AppTask_LED(void *p_arg)
 {
     OS_ERR err;
     int button = 0;
-    int led1 = 0;
-    int led2 = 0;
-    int led3 = 0;
 
     while (DEF_TRUE)
     { /* Task body, always written as an infinite loop.       */
 
-        // sem pend
+        OS_MSG_SIZE size;
+        OSQPend(&LED_Q, 0, 0, &size, NULL, &err);
+        // Queue pend
         CPU_CRITICAL_ENTER();
         button = btn_cnt % 4;
-        led1 = led_pattern[button][0];
-        led2 = led_pattern[button][1];
-        led3 = led_pattern[button][2];
-        // sem post
         CPU_CRITICAL_EXIT();
-        // button = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13);
-        // for (int i = 0; i < 3; i++)
-        // {
-        //     BSP_LED_OnOff(i + 1, pattern[i]);
-        // }
-        BSP_LED_OnOff(1, led1);
-        BSP_LED_OnOff(2, led2);
-        BSP_LED_OnOff(3, led3);
 
-        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
+        switch (button)
+        {
+        case 0:
+            OSQPost(&TTY_Q, (void *)messages[4], strlen(messages[4]), 0, &err);
+            BSP_LED_Off(1);
+            BSP_LED_Off(2);
+            BSP_LED_Off(3);
+            break;
+        case 1:
+            OSQPost(&TTY_Q, (void *)messages[1], strlen(messages[1]), 0, &err);
+            BSP_LED_On(1);
+            break;
+        case 2:
+            OSQPost(&TTY_Q, (void *)messages[2], strlen(messages[2]), 0, &err);
+            BSP_LED_On(2);
+            break;
+        case 3:
+            OSQPost(&TTY_Q, (void *)messages[3], strlen(messages[3]), 0, &err);
+            BSP_LED_On(3);
+            break;
+        }
+
+        OSTimeDlyHMSM(0u, 0u, 0u, 10u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
@@ -239,42 +260,16 @@ static void AppTask_LED(void *p_arg)
 static void AppTask_TTY(void *p_arg)
 {
     OS_ERR err;
-    int button = 0;
-    int button_count = 0;
-    int led1 = 0;
-    int led2 = 0;
-    int led3 = 0;
+    OS_MSG_SIZE size;
 
     while (DEF_TRUE)
     {
-        USART_SendData(Nucleo_COM1, 'A');
-        // sem pend
-        CPU_CRITICAL_ENTER();
-        button_count = btn_cnt;
-        button = btn_cnt % 4;
-        led1 = led_pattern[button][0];
-        led2 = led_pattern[button][1];
-        led3 = led_pattern[button][2];
-        // sem post
-        CPU_CRITICAL_EXIT();
-
-        // Button Count print
-        send_string("\n\rButton Pushed ");
-        send_string(button_count);
-        send_string("Times \n\r");
-
-        // LED State print
-        send_string("\n\rLED1: ");
-        send_string(led1);
-        send_string(", LED2: ");
-        send_string(led2);
-        send_string(", LED3: ");
-        send_string(led3);
-        send_string("\n\r");
-
-        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-                      OS_OPT_TIME_HMSM_STRICT,
-                      &err);
+        char *event = OSQPend(&TTY_Q, 0, 0, &size, (void *)0, &err);
+        send_string(event);
+        if (strncmp(event, "Btn", 3) == 0)
+        {
+            OSQPost(&LED_Q, (void *)messages[0], strlen(messages[0]), 0, &err);
+        }
     }
 }
 
@@ -287,14 +282,15 @@ static void AppTask_BTN(void *p_arg)
     { /* Task body, always written as an infinite loop.       */
 
         button = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13);
-        // sem pend
         CPU_CRITICAL_ENTER();
         btn_cnt += button;
         CPU_CRITICAL_EXIT();
-        // if continous button input is allowed
-        // button = 0;
-        // sem post
-        OSTimeDlyHMSM(0u, 0u, 0u, 1u,
+
+        if (button)
+        {
+            OSQPost(&TTY_Q, (void *)messages[0], strlen(messages[0]), 0, &err);
+        }
+        OSTimeDlyHMSM(0u, 0u, 0u, 200u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
     }
@@ -361,4 +357,35 @@ static void AppTaskCreate(void)
 
 static void AppObjCreate(void)
 {
+}
+/*
+*********************************************************************************************************
+*                                          Setup_Gpio()
+*
+* Description : Configure LED GPIOs directly
+*
+* Argument(s) : none
+*
+* Return(s)   : none
+*
+* Caller(s)   : AppTaskStart()
+*
+* Note(s)     :
+*              LED1 PB0
+*              LED2 PB7
+*              LED3 PB14
+*
+*********************************************************************************************************
+*/
+
+static void Button_Init(void)
+{
+    GPIO_InitTypeDef btn_init = {0};
+
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+    btn_init.GPIO_Mode = GPIO_Mode_IN;
+    btn_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    btn_init.GPIO_Speed = GPIO_Speed_2MHz;
+    btn_init.GPIO_Pin = GPIO_Pin_13;
+    GPIO_Init(GPIOC, &btn_init);
 }
