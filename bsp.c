@@ -345,6 +345,7 @@ void BSP_Init(void)
         ;
     }
 
+    USART_Config();
     BSP_LED_Init();         /* Initialize user LEDs                                 */
     BSP_PUSH_BUTTON_Init(); /* Initialize user Push button							*/
 
